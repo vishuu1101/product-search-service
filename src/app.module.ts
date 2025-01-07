@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ProductModule } from './module/product/product.module';
 import { ConfigModule } from '@nestjs/config';
 import { ElasticsearchModule } from './module/elasticsearch/elasticsearch.module';
+import { RabbitmqModule } from './module/rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { ElasticsearchModule } from './module/elasticsearch/elasticsearch.module
     }),
     ProductModule,
     ElasticsearchModule,
+    RabbitmqModule,
   ],
 })
 export class AppModule {}

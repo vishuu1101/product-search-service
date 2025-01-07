@@ -16,7 +16,6 @@ export class ElasticsearchService {
   async listIndices(): Promise<any> {
     const url = `${this.ELASTIC_SARCH_HOST}/_cat/indices?v&format=json`;
     const response = await firstValueFrom(this.httpService.get(url));
-    console.log(response.data);
     return response.data;
   }
 
