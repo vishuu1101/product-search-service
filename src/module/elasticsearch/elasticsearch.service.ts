@@ -1,7 +1,8 @@
-import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import { ElasticsearchService as ESService } from '@nestjs/elasticsearch';
+import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class ElasticsearchService {
@@ -9,72 +10,65 @@ export class ElasticsearchService {
     'ELASTIC_SEARCH_HOST',
   );
   constructor(
+    private readonly esService: ESService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
   ) {}
 
-  async listIndices(): Promise<any> {
-    const url = `${this.ELASTIC_SARCH_HOST}/_cat/indices?v&format=json`;
-    const response = await firstValueFrom(this.httpService.get(url));
-    return response.data;
-  }
-
-  async createIndex(indexName: string, indexSettings: object) {
-    const url = `${this.ELASTIC_SARCH_HOST}/${indexName}`;
-
-    try {
-      const isIndexExist = await this.isIndexExist(indexName);
-      if (isIndexExist) {
-        return { message: 'Index already exists', status: 'exists' };
-      }
-    } catch (error) {
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        if (error.response.status === 404) {
-          // Index does not exist, create it
-          const createResponse = await firstValueFrom(
-            this.httpService.put(url, indexSettings),
-          );
-          return createResponse.data;
-        }
-      } else {
-        console.error('unexpected error:', error.message);
-        throw error;
-      }
-    }
+  async listIndices() {
+    const response = await this.esService.cat.indices({
+      format: 'json', // Ensures the response is in JSON format
+    });
+    return response;
   }
 
   async deleteIndex(indexName: string) {
-    const url = `${this.ELASTIC_SARCH_HOST}/${indexName}`;
-    try {
-      const isIndexExist = await this.isIndexExist(indexName);
-      if (isIndexExist) {
-        const response = await firstValueFrom(this.httpService.delete(url));
-        if (response.status === 200) {
-          return { message: 'Index deleted successfully', status: 'Success' };
-        }
-      }
-    } catch (error) {
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        if (error.response.status === 404) {
-          return { message: 'Index not available', status: 'not-exist' };
-        }
-      } else {
-        console.error('unexpected error:', error.message);
-        throw error;
-      }
-    }
+    const response = await this.esService.indices.delete({
+      index: indexName,
+    });
+    return response;
   }
 
-  async isIndexExist(indexName: string) {
-    const url = `${this.ELASTIC_SARCH_HOST}/${indexName}`;
-    try {
-      const existsResponse = await firstValueFrom(this.httpService.head(url));
-      return existsResponse.status === 200;
-    } catch (error) {
-      console.error('unexpected error:', error.message);
-      throw error;
-    }
+  async createIndex(indexName: string, settings: any) {
+    console.log(`Connecting to Elasticsearch at: ${this.ELASTIC_SARCH_HOST}`);
+    await this.esService.indices.create({
+      index: indexName,
+      body: {
+        settings,
+      },
+    });
+  }
+
+  async addDocument(indexName: string, document: any) {
+    const url = `${this.ELASTIC_SARCH_HOST}/${indexName}/_doc`;
+    const response = await firstValueFrom(
+      this.httpService.post(url, document, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    );
+    console.log('Document indexed successfully:', response.data._index);
+    return response.data._index;
+  }
+
+  async search(index: string, query_vector: number[]) {
+    const result = await this.esService.search({
+      index,
+      body: {
+        size: 5,
+        query: {
+          script_score: {
+            query: { match_all: {} },
+            script: {
+              source:
+                "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
+              params: { query_vector },
+            },
+          },
+        },
+      },
+    });
+    return result.hits.hits;
   }
 }

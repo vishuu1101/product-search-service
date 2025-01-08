@@ -6,10 +6,9 @@ import {
   Param,
   Post,
   Put,
-  ValidationPipe,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
-import { AddProductRequest } from './dto/add-product-request.dto';
+import { SearchRequest } from './dto/document-by-vector-request';
 
 @Controller('product')
 export class ProductController {
@@ -27,7 +26,8 @@ export class ProductController {
 
   @Put('create-index/:indexName')
   async createIndex(@Param('indexName') indexName: string) {
-    return await this.productService.createIndex(indexName);
+    await this.productService.createIndex(indexName);
+    return { message: 'Success' };
   }
 
   @Delete('delete-index/:indexName')
@@ -35,8 +35,8 @@ export class ProductController {
     return await this.productService.deleteIndex(indexName);
   }
 
-  @Post()
-  async addProduct(@Body(ValidationPipe) request: AddProductRequest) {
-    console.log(request.title);
+  @Post('search')
+  async getDocumentByVector(@Body() request: SearchRequest) {
+    return await this.productService.search('product_info', request.searchText);
   }
 }

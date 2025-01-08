@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { ProductController } from './product.controller';
-import { ElasticsearchModule } from '../elasticsearch/elasticsearch.module';
+import { ElasticsearchClientModule } from '../elasticsearch/elasticsearch.module';
 import { ProductMessageListenerController } from './product-message-listener.controller';
+import { HttpClientModule } from '../httpclient/httpclient.module';
 
 @Module({
-  imports: [ElasticsearchModule],
-
+  imports: [ElasticsearchClientModule, HttpClientModule],
   providers: [ProductService],
   controllers: [ProductController, ProductMessageListenerController],
 })

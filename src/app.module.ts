@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ProductModule } from './module/product/product.module';
 import { ConfigModule } from '@nestjs/config';
-import { ElasticsearchModule } from './module/elasticsearch/elasticsearch.module';
+import { ElasticsearchClientModule } from './module/elasticsearch/elasticsearch.module';
 import { RabbitmqModule } from './module/rabbitmq/rabbitmq.module';
 
 @Module({
@@ -11,7 +11,7 @@ import { RabbitmqModule } from './module/rabbitmq/rabbitmq.module';
       envFilePath: `${process.env.NODE_ENV}.env`,
     }),
     ProductModule,
-    ElasticsearchModule,
+    ElasticsearchClientModule,
     RabbitmqModule,
   ],
 })

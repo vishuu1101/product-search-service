@@ -1,15 +1,20 @@
 import { Module } from '@nestjs/common';
 import { ElasticsearchService } from './elasticsearch.service';
-import { HttpModule } from '@nestjs/axios';
+import { ElasticsearchModule } from '@nestjs/elasticsearch';
+import { ConfigService } from '@nestjs/config';
+import { HttpClientModule } from '../httpclient/httpclient.module';
 
 @Module({
   imports: [
-    HttpModule.register({
-      timeout: 5000,
-      maxRedirects: 5,
+    HttpClientModule,
+    ElasticsearchModule.registerAsync({
+      useFactory: async (configService: ConfigService) => ({
+        node: configService.get<string>('ELASTIC_SEARCH_HOST'),
+      }),
+      inject: [ConfigService],
     }),
   ],
   providers: [ElasticsearchService],
   exports: [ElasticsearchService],
 })
-export class ElasticsearchModule {}
+export class ElasticsearchClientModule {}

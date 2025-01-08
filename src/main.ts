@@ -15,6 +15,7 @@ async function bootstrap() {
     transport: Transport.RMQ,
     options: {
       urls: [rabbitMQURL],
+      noAck: false,
       queue: 'product-search-service',
       queueOptions: { durable: true },
     },
