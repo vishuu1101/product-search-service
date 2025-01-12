@@ -72,13 +72,11 @@ export class ProductService {
     };
 
     try {
-      // Perform POST request
       const response = await lastValueFrom(
         this.httpService.post(this.GET_VECTOR_URL, data, { headers }),
       );
       return response.data; // Return the response data
     } catch (error) {
-      // Handle error
       console.error('Error in HTTP request', error);
       throw new Error('Error in calling product API');
     }

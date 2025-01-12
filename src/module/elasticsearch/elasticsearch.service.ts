@@ -1,37 +1,28 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { firstValueFrom } from 'rxjs';
-import { ElasticsearchService as ESService } from '@nestjs/elasticsearch';
-import { HttpService } from '@nestjs/axios';
+import { Inject, Injectable } from '@nestjs/common';
+import { Client } from '@elastic/elasticsearch';
 
 @Injectable()
 export class ElasticsearchService {
-  private readonly ELASTIC_SARCH_HOST: string = this.configService.get(
-    'ELASTIC_SEARCH_HOST',
-  );
   constructor(
-    private readonly esService: ESService,
-    private readonly configService: ConfigService,
-    private readonly httpService: HttpService,
+    @Inject('ELASTICSEARCH_CLIENT') private readonly esClient: Client,
   ) {}
 
   async listIndices() {
-    const response = await this.esService.cat.indices({
-      format: 'json', // Ensures the response is in JSON format
+    const response = await this.esClient.cat.indices({
+      format: 'json',
     });
     return response;
   }
 
   async deleteIndex(indexName: string) {
-    const response = await this.esService.indices.delete({
+    const response = await this.esClient.indices.delete({
       index: indexName,
     });
     return response;
   }
 
   async createIndex(indexName: string, settings: any) {
-    console.log(`Connecting to Elasticsearch at: ${this.ELASTIC_SARCH_HOST}`);
-    await this.esService.indices.create({
+    await this.esClient.indices.create({
       index: indexName,
       body: {
         settings,
@@ -40,35 +31,35 @@ export class ElasticsearchService {
   }
 
   async addDocument(indexName: string, document: any) {
-    const url = `${this.ELASTIC_SARCH_HOST}/${indexName}/_doc`;
-    const response = await firstValueFrom(
-      this.httpService.post(url, document, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }),
+    const customHeaders = {
+      'Content-Type': 'application/json',
+    };
+
+    const response = await this.esClient.transport.request(
+      {
+        method: 'POST',
+        path: `/${indexName}/_doc/`,
+        body: document,
+      },
+      { headers: customHeaders },
     );
-    console.log('Document indexed successfully:', response.data._index);
-    return response.data._index;
+
+    return response;
   }
 
   async search(index: string, query_vector: number[]) {
-    const result = await this.esService.search({
-      index,
+    const response = await this.esClient.search({
+      index: index,
       body: {
-        size: 5,
         query: {
-          script_score: {
-            query: { match_all: {} },
-            script: {
-              source:
-                "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
-              params: { query_vector },
-            },
+          knn: {
+            field: 'embedding',
+            query_vector: query_vector,
+            k: 5,
           },
         },
       },
     });
-    return result.hits.hits;
+    return response.hits.hits;
   }
 }
